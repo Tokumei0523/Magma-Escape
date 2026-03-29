@@ -115,6 +115,113 @@ for (let i = 0; i < mountainCount; i++) {
 
 let keys = {};
 
+// --- モバイル検出 ---
+const isMobile = () => window.innerWidth <= 1024 || window.innerHeight <= 600;
+
+// --- 画面方向と サイズ調整 ---
+function updateCanvasSize() {
+    const container = document.getElementById("game-container");
+    const canvas = document.getElementById("gameCanvas");
+    
+    if (isMobile()) {
+        // モバイルモード（横向きのみ）
+        let screenWidth = window.innerWidth;
+        let screenHeight = window.innerHeight;
+        
+        // スマートフォンのアドレスバー・検索バーを考慮
+        // visualViewport を使用可能な場合はそちらを優先
+        if (window.visualViewport) {
+            screenWidth = window.visualViewport.width;
+            screenHeight = window.visualViewport.height;
+        }
+        
+        const aspect = 1200 / 600; // 元のアスペクト比
+        
+        let newWidth, newHeight;
+        if (screenWidth / screenHeight > aspect) {
+            // 高さに合わせる
+            newHeight = screenHeight;
+            newWidth = newHeight * aspect;
+        } else {
+            // 幅に合わせる
+            newWidth = screenWidth;
+            newHeight = newWidth / aspect;
+        }
+        
+        container.style.width = newWidth + "px";
+        container.style.height = newHeight + "px";
+        
+        // canvas内部サイズは固定（1200x600）
+        canvas.width = 1200;
+        canvas.height = 600;
+        
+        // タッチコントロール表示（横向きの場合のみ）
+        const isLandscape = screenWidth > screenHeight;
+        if (isLandscape) {
+            showTouchControls();
+        } else {
+            hideTouchControls();
+        }
+    } else {
+        // デスクトップモード
+        container.style.width = "1200px";
+        container.style.height = "600px";
+        canvas.width = 1200;
+        canvas.height = 600;
+        hideTouchControls();
+    }
+}
+
+// --- タッチコントロール表示・非表示 ---
+function showTouchControls() {
+    const touchControls = document.getElementById("touchControls");
+    if (touchControls) {
+        touchControls.classList.add("active");
+    }
+}
+
+function hideTouchControls() {
+    const touchControls = document.getElementById("touchControls");
+    if (touchControls) {
+        touchControls.classList.remove("active");
+    }
+}
+
+// --- 画面向きチェック（横向きのみ対応） ---
+function checkOrientation() {
+    const warning = document.getElementById("orientationWarning");
+    if (!isMobile()) return;
+    
+    // 横向き（幅 > 高さ）チェック
+    const isLandscape = window.innerWidth > window.innerHeight;
+    if (!isLandscape) {
+        // 縦向きの場合は警告表示
+        warning.style.display = "flex";
+        gameActive = false; // ゲーム停止
+    } else {
+        warning.style.display = "none";
+        // 必要に応じてゲーム再開
+    }
+}
+
+// 初期化時とリサイズ時に呼ぶ
+window.addEventListener("load", () => {
+    updateCanvasSize();
+    checkOrientation();
+});
+
+window.addEventListener("resize", () => {
+    updateCanvasSize();
+    checkOrientation();
+});
+
+window.addEventListener("orientationchange", () => {
+    setTimeout(() => {
+        updateCanvasSize();
+        checkOrientation();
+    }, 100);
+});
+
 
 // --- 音量更新のロジック ---
 function updateBgmVolume(vol) {
@@ -163,6 +270,123 @@ closeHowToBtn.addEventListener("click", () => {
     howToModal.style.display = "none";
     sounds.click.play();
 });
+
+// --- モバイルタッチボタンのイベント処理 ---
+const touchBtns = {
+    left: document.getElementById("leftBtn"),
+    right: document.getElementById("rightBtn"),
+    jump: document.getElementById("jumpBtn"),
+    dash: document.getElementById("dashBtn")
+};
+
+// ジャンプボタン
+if (touchBtns.jump) {
+    const jumpAction = () => {
+        if (!gameStarted && gameActive === false) {
+            startGame();
+            return;
+        }
+        if (!gameActive) return;
+        
+        // ジャンプ処理
+        if (player.onGround || player.jumpCount < player.maxJumps) {
+            sounds.jump.currentTime = 0;
+            sounds.jump.play();
+            player.velY = -12.5;
+            player.jumpCount++;
+            if (player.jumpCount === 2) {
+                for (let i = 0; i < 15; i++) {
+                    particles.push({
+                        x: player.x + player.width / 2,
+                        y: player.y + player.height,
+                        vx: (Math.random() - 0.5) * 12,
+                        vy: Math.random() * 3,
+                        life: 1.0,
+                        color: "rgba(255, 255, 255, 0.8)",
+                        size: Math.random() * 8 + 2,
+                        isWind: true
+                    });
+                }
+            }
+        }
+    };
+    
+    touchBtns.jump.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        jumpAction();
+    });
+    touchBtns.jump.addEventListener("mousedown", jumpAction);
+}
+
+// ダッシュボタン
+if (touchBtns.dash) {
+    const dashAction = () => {
+        if (!gameActive) return;
+        
+        // ダッシュ処理
+        if (player.canDash) {
+            sounds.dash.currentTime = 0;
+            sounds.dash.play();
+            player.isDashing = true;
+            player.canDash = false;
+            player.velX = (player.facing === "right" ? 1 : -1) * 22;
+            player.velY = -1.5;
+            
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: player.x + player.width / 2,
+                    y: player.y + player.height / 2,
+                    vx: (player.facing === "right" ? -1 : 1) * (Math.random() * 12 + 4),
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: "#00ffcc",
+                    size: Math.random() * 6 + 2,
+                    isWind: false
+                });
+            }
+            
+            dashBar.style.transition = "none";
+            dashBar.style.width = "0%";
+            dashBar.style.background = "#ff3e3e";
+            
+            // ダッシュの持続時間を制限（150ms後にfalseに）
+            setTimeout(() => { player.isDashing = false; }, 150);
+            setTimeout(() => {
+                dashBar.style.transition = "width 0.8s linear";
+                dashBar.style.width = "100%";
+            }, 10);
+            // ダッシュのクールタイムをリセット（800ms後にcanDashをtrueに）
+            setTimeout(() => {
+                player.canDash = true;
+                if (gameActive) {
+                    dashBar.style.background = "#00ffcc";
+                    dashBar.style.boxShadow = "0 0 10px #00ffcc";
+                }
+            }, 800);
+        }
+    };
+    
+    touchBtns.dash.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        dashAction();
+    });
+    touchBtns.dash.addEventListener("mousedown", dashAction);
+}
+
+// 移動ボタン（キーボードと同じ方式）
+if (touchBtns.left) {
+    touchBtns.left.addEventListener("touchstart", (e) => { e.preventDefault(); keys["ArrowLeft"] = true; keys["A"] = true; });
+    touchBtns.left.addEventListener("touchend", (e) => { e.preventDefault(); keys["ArrowLeft"] = false; keys["A"] = false; });
+    touchBtns.left.addEventListener("mousedown", () => { keys["ArrowLeft"] = true; keys["A"] = true; });
+    touchBtns.left.addEventListener("mouseup", () => { keys["ArrowLeft"] = false; keys["A"] = false; });
+}
+
+if (touchBtns.right) {
+    touchBtns.right.addEventListener("touchstart", (e) => { e.preventDefault(); keys["ArrowRight"] = true; keys["D"] = true; });
+    touchBtns.right.addEventListener("touchend", (e) => { e.preventDefault(); keys["ArrowRight"] = false; keys["D"] = false; });
+    touchBtns.right.addEventListener("mousedown", () => { keys["ArrowRight"] = true; keys["D"] = true; });
+    touchBtns.right.addEventListener("mouseup", () => { keys["ArrowRight"] = false; keys["D"] = false; });
+}
 
 function resetGame() {
     // ゲーム状態のリセット
@@ -467,7 +691,23 @@ function gameOver() {
 
 function isCollide(a, b) { return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; }
 
-function update() {
+// フレームレート制御用変数
+let lastFrameTime = 0;
+const FRAME_TIME = 1000 / 60; // 60FPS固定
+
+function update(currentTime) {
+    // フレームレート制御（60FPSに統一）
+    if (lastFrameTime === 0) lastFrameTime = currentTime;
+    const deltaTime = currentTime - lastFrameTime;
+    lastFrameTime = currentTime;
+    
+    // フレームをスキップするか、複数フレーム分の更新が必要か判定
+    if (deltaTime < FRAME_TIME * 0.8) {
+        // フレームレートが高い場合はスキップ
+        requestAnimationFrame(update);
+        return;
+    }
+    
     frameCount++;
 
 
@@ -546,8 +786,8 @@ function update() {
 
     if (!player.isDashing) {
         let accel = player.jumpCount > 0 ? airAccel : 1.0;
-        if (keys["ArrowRight"] || keys["KeyD"]) { player.velX += accel; player.facing = "right"; }
-        if (keys["ArrowLeft"] || keys["KeyA"]) { player.velX -= accel; player.facing = "left"; }
+        if (keys["ArrowRight"] || keys["d"] || keys["D"]) { player.velX += accel; player.facing = "right"; }
+        if (keys["ArrowLeft"] || keys["a"] || keys["A"]) { player.velX -= accel; player.facing = "left"; }
         player.velX *= friction; player.velY += gravity;
     }
 
