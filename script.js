@@ -43,7 +43,7 @@ for (let key in sounds) {
 }
 
 sounds.bgm.volume = seVolume * 0.05
-sounds.click.volume = seVolume * 2
+sounds.click.volume = Math.min(1.0, seVolume * 2);
 
 
 const settingsModal = document.getElementById("settingsModal");
