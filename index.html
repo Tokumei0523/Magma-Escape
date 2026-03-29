@@ -4,7 +4,14 @@
 <head>
     <link rel="icon" href="images/favicon.png" type="image/png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Magma Escape">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="full-screen" content="yes">
+    <meta name="apple-touch-fullscreen" content="yes">
     <title>Magma Escape</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,6 +70,23 @@
                     <div id="dashBar"></div>
                 </div>
             </div>
+        </div>
+
+        <!-- モバイルタッチコントロール -->
+        <div id="touchControls" class="touch-controls">
+            <div class="touch-button-group left">
+                <button id="leftBtn" class="touch-btn touch-left" data-action="left">←</button>
+                <button id="rightBtn" class="touch-btn touch-right" data-action="right">→</button>
+            </div>
+            <div class="touch-button-group right">
+                <button id="jumpBtn" class="touch-btn touch-jump" data-action="jump">JUMP</button>
+                <button id="dashBtn" class="touch-btn touch-dash" data-action="dash">DASH</button>
+            </div>
+        </div>
+
+        <!-- 縦向き警告 -->
+        <div id="orientationWarning" class="orientation-warning" style="display:none;">
+            <p>Please rotate your device to landscape mode</p>
         </div>
 
         <div id="msg">
