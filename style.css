@@ -208,3 +208,81 @@ button:hover {
     border: 3px solid #ff1744;
     z-index: 100;
 }
+
+/* style.css の末尾に追加 */
+
+/* スマホ用ボタンの基本スタイル */
+.touch-only {
+    display: none; /* 基本は非表示 */
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    justify-content: space-between;
+    padding: 0 30px;
+    box-sizing: border-box;
+    z-index: 150;
+    pointer-events: none;
+}
+
+.touch-btn {
+    pointer-events: auto;
+    width: 70px;
+    height: 70px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 30px;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+
+.touch-btn:active {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.left-group, .right-group {
+    display: flex;
+    gap: 15px;
+    pointer-events: none;
+}
+
+.jump-btn {
+    width: 90px;
+    height: 90px;
+    background: rgba(255, 87, 34, 0.4);
+}
+
+.dash-btn {
+    width: 80px;
+    height: 80px;
+    font-size: 16px;
+    background: rgba(0, 255, 204, 0.3);
+}
+
+/* レスポンシブ対応：画面が小さい場合 */
+@media (max-width: 1200px) {
+    #game-container {
+        width: 100vw;
+        height: 50vw; /* アスペクト比を維持 */
+        max-height: 100vh;
+    }
+    canvas {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+/* タッチデバイスならボタンを表示 */
+@media (pointer: coarse) {
+    .touch-only {
+        display: flex;
+    }
+    /* PC用操作ガイドを非表示にするなどの調整 */
+    .controls-guide p {
+        font-size: 16px;
+    }
+}
