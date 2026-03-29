@@ -1,160 +1,62 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magma Escape - PC Edition</title>
-    <style>
-        body { 
-            margin: 0; 
-            background: #0a0a0a; 
-            color: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            overflow: hidden; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-        }
-
-        #game-container { 
-            position: relative; 
-            border: 4px solid #333; 
-            border-radius: 8px; 
-            box-shadow: 0 0 50px rgba(0,0,0,0.8); 
-        }
-
-        canvas { 
-            background: #1a1a1a; 
-            display: block; 
-        }
-
-        /* UIレイアウト */
-        .ui { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            pointer-events: none; 
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8); 
-            z-index: 10;
-            display: none; /* 初期状態では隠す */
-        }
-
-        .stats { 
-            font-size: 24px; 
-            font-weight: bold; 
-            margin-bottom: 5px; 
-            letter-spacing: 1px;
-        }
-
-        .dash-wrapper {
-            margin-top: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        #dashContainer { 
-            width: 180px; 
-            height: 10px; 
-            background: rgba(255, 255, 255, 0.1); 
-            border-radius: 5px; 
-            overflow: hidden; 
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-        }
-
-        #dashBar { 
-            width: 100%; 
-            height: 100%; 
-            background: #00ffcc; 
-            box-shadow: 0 0 15px #00ffcc;
-        }
-
-        /* タイトル画面 */
-        #titleScreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 200;
-        }
-
-        #titleScreen h1 {
-            color: #ff9100;
-            font-size: 80px;
-            margin: 0;
-            text-shadow: 0 0 20px #ff3d00;
-            text-transform: uppercase;
-        }
-
-        .controls-hint {
-            margin-top: 20px;
-            color: #aaa;
-            font-size: 18px;
-            text-align: center;
-        }
-
-        /* ゲームオーバー画面 */
-        #msg { 
-            position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); 
-            text-align: center; 
-            display: none; 
-            background: rgba(0, 0, 0, 0.85); 
-            padding: 40px 60px; 
-            border-radius: 20px; 
-            border: 2px solid #ff1744; 
-            z-index: 100;
-        }
-
-        h1 { color: #ff1744; margin: 0 0 10px 0; font-size: 64px; text-transform: uppercase; }
-        p { font-size: 24px; margin-bottom: 30px; }
-
-        button { 
-            pointer-events: auto; 
-            padding: 15px 40px; 
-            font-size: 24px; 
-            font-weight: bold;
-            cursor: pointer; 
-            background: #ff1744; 
-            color: white; 
-            border: none; 
-            border-radius: 50px; 
-            transition: all 0.2s; 
-            box-shadow: 0 4px 15px rgba(255, 23, 68, 0.4);
-        }
-
-        button:hover { 
-            background: #ff5252; 
-            transform: scale(1.1); 
-            box-shadow: 0 6px 20px rgba(255, 23, 68, 0.6);
-        }
-    </style>
+    <title>Magma Escape</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
     <div id="game-container">
         <div id="titleScreen">
             <h1>MAGMA ESCAPE</h1>
-            <button id="startBtn">CLICK/SPACE TO START</button>
-            <div class="controls-hint">
-                [A/D , ←/→] Move <br /> [Space/W/↑] Jump / Double Jum <br /> [Shift] Dash
+            <button id="startBtn">START [SPACE/CLICK]</button>
+
+            <div class="btn-group">
+                <button id="openSettings" class="sub-btn">SETTINGS</button>
+                <button id="openHowTo" class="sub-btn">HOW TO PLAY</button>
+            </div>
+        </div>
+
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <h2>Audio Settings</h2>
+                <div class="volume-control">
+                    <span>BGM VOLUME</span>
+                    <input type="range" id="bgmSlider" min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <div class="volume-control">
+                    <span>SE VOLUME</span>
+                    <input type="range" id="seSlider" min="0" max="1" step="0.1" value="0.5">
+                </div>
+                <button id="closeSettings" class="sub-btn">OK</button>
+            </div>
+        </div>
+
+        <div id="howToModal" class="modal">
+            <div class="modal-content">
+                <h2>How to Play</h2>
+                <div class="controls-guide">
+                    <p><b>MOVE:</b> [A / D] or [← / →]</p>
+                    <p><b>JUMP:</b> [Space / W / ↑]</p>
+                    <p><b>DASH:</b> [Shift]</p>
+                    <p><b>RESET:</b> [R]</p>
+                </div>
+                <button id="closeHowTo" class="sub-btn">CLOSE</button>
             </div>
         </div>
 
         <div class="ui" id="gameUI">
             <div class="stats">SCORE: <span id="score">0</span></div>
             <div class="stats">HEIGHT: <span id="dist">0</span>m</div>
-            
             <div class="dash-wrapper">
                 <div id="dashContainer">
                     <div id="dashBar"></div>
@@ -163,9 +65,9 @@
         </div>
 
         <div id="msg">
-            <h1>BURNED!</h1>
+            <h1 id="statusH1">BURNED!</h1>
             <p>FINAL SCORE: <span id="finalScore">0</span></p>
-            <button id="resetBtn">RETRY (R)</button>
+            <button id="resetBtn">RETRY [R]</button>
         </div>
 
         <canvas id="gameCanvas" width="1200" height="600"></canvas>
@@ -173,4 +75,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>
