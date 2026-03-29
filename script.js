@@ -1,6 +1,6 @@
 // --- 音量管理用の変数 (保存データがあれば読み込み、なければ0.5) ---
-let bgmVolume = localStorage.getItem("bgmVolume") !== null ? parseFloat(localStorage.getItem("bgmVolume")) : 0.5;
-let seVolume = localStorage.getItem("seVolume") !== null ? parseFloat(localStorage.getItem("seVolume")) : 0.5;
+let bgmVolume = localStorage.getItem("bgmVolume") !== null ? Math.min(1.0, parseFloat(localStorage.getItem("bgmVolume"))) : 0.5;
+let seVolume = localStorage.getItem("seVolume") !== null ? Math.min(1.0, parseFloat(localStorage.getItem("seVolume"))) : 0.5;
 
 // スライダーの初期位置を保存された値に合わせる（DOM取得の後に実行）
 window.addEventListener("DOMContentLoaded", () => {
