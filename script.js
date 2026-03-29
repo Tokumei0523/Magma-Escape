@@ -122,21 +122,21 @@ const isMobile = () => window.innerWidth <= 1024 || window.innerHeight <= 600;
 function updateCanvasSize() {
     const container = document.getElementById("game-container");
     const canvas = document.getElementById("gameCanvas");
-    
+
     if (isMobile()) {
         // モバイルモード（横向きのみ）
         let screenWidth = window.innerWidth;
         let screenHeight = window.innerHeight;
-        
+
         // スマートフォンのアドレスバー・検索バーを考慮
         // visualViewport を使用可能な場合はそちらを優先
         if (window.visualViewport) {
             screenWidth = window.visualViewport.width;
             screenHeight = window.visualViewport.height;
         }
-        
+
         const aspect = 1200 / 600; // 元のアスペクト比
-        
+
         let newWidth, newHeight;
         if (screenWidth / screenHeight > aspect) {
             // 高さに合わせる
@@ -147,14 +147,14 @@ function updateCanvasSize() {
             newWidth = screenWidth;
             newHeight = newWidth / aspect;
         }
-        
+
         container.style.width = newWidth + "px";
         container.style.height = newHeight + "px";
-        
+
         // canvas内部サイズは固定（1200x600）
         canvas.width = 1200;
         canvas.height = 600;
-        
+
         // タッチコントロール表示（横向きの場合のみ）
         const isLandscape = screenWidth > screenHeight;
         if (isLandscape) {
@@ -191,7 +191,7 @@ function hideTouchControls() {
 function checkOrientation() {
     const warning = document.getElementById("orientationWarning");
     if (!isMobile()) return;
-    
+
     // 横向き（幅 > 高さ）チェック
     const isLandscape = window.innerWidth > window.innerHeight;
     if (!isLandscape) {
@@ -287,7 +287,7 @@ if (touchBtns.jump) {
             return;
         }
         if (!gameActive) return;
-        
+
         // ジャンプ処理
         if (player.onGround || player.jumpCount < player.maxJumps) {
             sounds.jump.currentTime = 0;
@@ -310,7 +310,7 @@ if (touchBtns.jump) {
             }
         }
     };
-    
+
     touchBtns.jump.addEventListener("touchstart", (e) => {
         e.preventDefault();
         jumpAction();
@@ -322,7 +322,7 @@ if (touchBtns.jump) {
 if (touchBtns.dash) {
     const dashAction = () => {
         if (!gameActive) return;
-        
+
         // ダッシュ処理
         if (player.canDash) {
             sounds.dash.currentTime = 0;
@@ -331,7 +331,7 @@ if (touchBtns.dash) {
             player.canDash = false;
             player.velX = (player.facing === "right" ? 1 : -1) * 22;
             player.velY = -1.5;
-            
+
             for (let i = 0; i < 20; i++) {
                 particles.push({
                     x: player.x + player.width / 2,
@@ -344,11 +344,11 @@ if (touchBtns.dash) {
                     isWind: false
                 });
             }
-            
+
             dashBar.style.transition = "none";
             dashBar.style.width = "0%";
             dashBar.style.background = "#ff3e3e";
-            
+
             // ダッシュの持続時間を制限（150ms後にfalseに）
             setTimeout(() => { player.isDashing = false; }, 150);
             setTimeout(() => {
@@ -365,7 +365,7 @@ if (touchBtns.dash) {
             }, 800);
         }
     };
-    
+
     touchBtns.dash.addEventListener("touchstart", (e) => {
         e.preventDefault();
         dashAction();
@@ -700,14 +700,14 @@ function update(currentTime) {
     if (lastFrameTime === 0) lastFrameTime = currentTime;
     const deltaTime = currentTime - lastFrameTime;
     lastFrameTime = currentTime;
-    
+
     // フレームをスキップするか、複数フレーム分の更新が必要か判定
     if (deltaTime < FRAME_TIME * 0.8) {
         // フレームレートが高い場合はスキップ
         requestAnimationFrame(update);
         return;
     }
-    
+
     frameCount++;
 
 
@@ -756,8 +756,16 @@ function update(currentTime) {
     }
 
     platforms.forEach(p => {
-        if (p.isMovingX) { p.x += p.velX; if (Math.abs(p.x - p.startX) > p.range) p.velX *= -1; }
-        if (p.isMovingY) { p.y += p.velY; if (Math.abs(p.y - p.startY) > p.range) p.velY *= -1; }
+        if (p.isMovingX) {
+            p.x += p.velX;
+            if (Math.abs(p.x - p.startX) > p.range)
+                p.velX *= -1;
+        }
+        if (p.isMovingY) {
+            p.y += p.velY;
+            if (Math.abs(p.y - p.startY) > p.range)
+                p.velY *= -1;
+        }
     });
 
     let isInVent = false;
@@ -786,8 +794,8 @@ function update(currentTime) {
 
     if (!player.isDashing) {
         let accel = player.jumpCount > 0 ? airAccel : 1.0;
-        if (keys["ArrowRight"] || keys["d"] || keys["D"]) { player.velX += accel; player.facing = "right"; }
-        if (keys["ArrowLeft"] || keys["a"] || keys["A"]) { player.velX -= accel; player.facing = "left"; }
+        if (keys["ArrowRight"] || keys["d"] || keys["KeyD"]) { player.velX += accel; player.facing = "right"; }
+        if (keys["ArrowLeft"] || keys["a"] || keys["KeyA"]) { player.velX -= accel; player.facing = "left"; }
         player.velX *= friction; player.velY += gravity;
     }
 
@@ -832,6 +840,7 @@ function update(currentTime) {
             } else if (player.isDashing) {
                 sounds.stomp.currentTime = 0;
                 sounds.stomp.play();
+                combo++;
                 let comboScore = 500 * combo;
                 score += comboScore;
                 addPopup(e.x, e.y, (combo > 1 ? combo + " COMBO! " : "") + "+" + comboScore, `hsl(${(combo * 40) % 360}, 100%, 70%)`, 24 + combo * 4);
