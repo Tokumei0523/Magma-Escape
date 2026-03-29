@@ -338,6 +338,47 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keyup", (e) => { keys[e.code] = false; });
 
+// --- script.js に追加：タッチ操作のハンドリング ---
+
+function setupTouchControls() {
+    const touchButtons = [
+        { id: "btn-left", code: "ArrowLeft" },
+        { id: "btn-right", code: "ArrowRight" },
+        { id: "btn-jump", code: "Space" },
+        { id: "btn-dash", code: "ShiftLeft" }
+    ];
+
+    touchButtons.forEach(btn => {
+        const el = document.getElementById(btn.id);
+        if (!el) return;
+
+        // タッチ開始
+        el.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            // 擬似的にkeydownイベントを発火させる（ジャンプ等の1回限りの処理のため）
+            const event = new KeyboardEvent("keydown", { code: btn.code });
+            window.dispatchEvent(event);
+            keys[btn.code] = true;
+        }, { passive: false });
+
+        // タッチ終了
+        el.addEventListener("touchend", (e) => {
+            e.preventDefault();
+            keys[btn.code] = false;
+        }, { passive: false });
+    });
+}
+
+// 初期化時に実行
+setupTouchControls();
+
+// --- 既存の startGame への修正（ブラウザの音声再生制限対策） ---
+startBtn.addEventListener("click", () => {
+    // iOS/Androidではクリックイベント内で音声を一度再生しないと鳴らない場合がある
+    sounds.click.play().catch(() => { });
+    startGame();
+});
+
 function drawRoundRect(x, y, w, h, r, fill = true, stroke = false) {
     if (w < 2 * r) r = w / 2; if (h < 2 * r) r = h / 2;
     ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
