@@ -5,11 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magma Escape</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -71,6 +71,17 @@
         </div>
 
         <canvas id="gameCanvas" width="1200" height="600"></canvas>
+
+        <div id="touch-controls" class="touch-only">
+            <div class="left-group">
+                <div id="btn-left" class="touch-btn">◀</div>
+                <div id="btn-right" class="touch-btn">▶</div>
+            </div>
+            <div class="right-group">
+                <div id="btn-dash" class="touch-btn dash-btn">DASH</div>
+                <div id="btn-jump" class="touch-btn jump-btn">JUMP</div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
