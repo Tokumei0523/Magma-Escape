@@ -1,4 +1,20 @@
-let mainVolume = 0.5;
+// --- 音量管理用の変数 (保存データがあれば読み込み、なければ0.5) ---
+let bgmVolume = localStorage.getItem("bgmVolume") !== null ? parseFloat(localStorage.getItem("bgmVolume")) : 0.5;
+let seVolume = localStorage.getItem("seVolume") !== null ? parseFloat(localStorage.getItem("seVolume")) : 0.5;
+
+// スライダーの初期位置を保存された値に合わせる（DOM取得の後に実行）
+window.addEventListener("DOMContentLoaded", () => {
+    const bgmS = document.getElementById("bgmSlider");
+    const seS = document.getElementById("seSlider");
+
+    if (bgmS) bgmS.value = bgmVolume;
+    if (seS) seS.value = seVolume;
+    document.getElementById("bgmSlider").value = bgmVolume;
+    document.getElementById("seSlider").value = seVolume;
+    // 初期音量を適用
+    updateBgmVolume(bgmVolume);
+    updateSeVolume(seVolume);
+});
 
 const sounds = {
     bgm: new Audio("sounds/bgm.mp3"),
@@ -22,10 +38,21 @@ sounds.bgm.loop = true;
 
 // 音量を調整
 for (let key in sounds) {
-    sounds[key].volume = mainVolume;
+    sounds[key].volume = seVolume;
 }
 
-sounds.bgm.volume = mainVolume * 0.05
+sounds.bgm.volume = seVolume * 0.05
+sounds.click.volume = seVolume * 2
+
+
+const settingsModal = document.getElementById("settingsModal");
+const howToModal = document.getElementById("howToModal");
+
+const openSettingsBtn = document.getElementById("openSettings");
+const closeSettingsBtn = document.getElementById("closeSettings");
+
+const openHowToBtn = document.getElementById("openHowTo");
+const closeHowToBtn = document.getElementById("closeHowTo");
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -85,14 +112,160 @@ for (let i = 0; i < mountainCount; i++) {
 
 let keys = {};
 
-function resetGame() { location.reload(); }
+
+// --- 音量更新のロジック ---
+function updateBgmVolume(vol) {
+    bgmVolume = vol;
+    sounds.bgm.volume = vol * 0.1;
+    localStorage.setItem("bgmVolume", vol); // 保存！
+}
+
+function updateSeVolume(vol) {
+    seVolume = vol;
+    for (let key in sounds) {
+        if (key !== "bgm") {
+            sounds[key].volume = vol;
+
+        }
+    }
+    localStorage.setItem("seVolume", vol); // 保存！
+}
+
+// --- スライダーのイベント ---
+bgmSlider.addEventListener("input", (e) => {
+    updateBgmVolume(parseFloat(e.target.value));
+});
+
+seSlider.addEventListener("input", (e) => {
+    updateSeVolume(parseFloat(e.target.value));
+    sounds.click.currentTime = 0;
+    sounds.click.play();
+});
+
+// --- モーダル開閉のイベント ---
+openSettingsBtn.addEventListener("click", () => {
+    settingsModal.style.display = "flex";
+    sounds.click.play();
+});
+closeSettingsBtn.addEventListener("click", () => {
+    settingsModal.style.display = "none";
+    sounds.click.play();
+});
+
+openHowToBtn.addEventListener("click", () => {
+    howToModal.style.display = "flex";
+    sounds.click.play();
+});
+closeHowToBtn.addEventListener("click", () => {
+    howToModal.style.display = "none";
+    sounds.click.play();
+});
+
+function resetGame() {
+    // ゲーム状態のリセット
+    score = 0;
+    distance = 0;
+    gameActive = true;
+    frameCount = 0;
+    combo = 0;
+    forceHighJump = false;
+
+    lavaY = 750;
+    baseLavaSpeed = 0.8;
+
+    player = {
+        x: startX, y: 300, width: 35, height: 35,
+        speed: 7, velX: 0, velY: 0,
+        jumpCount: 0, maxJumps: 2,
+        canDash: true, isDashing: false, facing: "right",
+        flashFrame: 0,
+        onGround: false
+    };
+
+    cameraX = player.x - 450;
+    cameraY = player.y - 250;
+
+    platforms = [{ x: 0, y: 400, width: 800, height: 60, isMovingX: false, isMovingY: false }];
+    hazards = []; enemies = []; coins = []; springs = []; particles = []; popups = [];
+    vents = [];
+    fireballs = [];
+    nextSpawnX = 800; lastY = 400;
+    keys = {};
+
+    // UIのリセット
+    msgEl.style.display = "none";
+    scoreEl.innerText = 0;
+    distEl.innerText = 0;
+    dashBar.style.transition = "none";
+    dashBar.style.width = "100%";
+    dashBar.style.background = "#00ffcc";
+    dashBar.style.boxShadow = "0 0 10px #00ffcc";
+
+    // サウンドのリセット
+    sounds.bgm.currentTime = 0;
+    sounds.bgm.play();
+    sounds.lavaLoop.currentTime = 0;
+}
+
+function goToTitle() {
+    // ゲームを停止してタイトルに戻る
+    gameActive = false;
+    gameStarted = false;
+
+    // サウンド停止
+    sounds.bgm.pause();
+    sounds.bgm.currentTime = 0;
+    sounds.lavaLoop.pause();
+    sounds.lavaLoop.currentTime = 0;
+    sounds.vent.pause();
+    sounds.vent.currentTime = 0;
+
+    // UIの切り替え
+    msgEl.style.display = "none";
+    gameUI.style.display = "none";
+    titleScreen.style.display = "flex";
+}
+
 resetBtn.addEventListener("click", resetGame);
 
 // ゲーム開始関数
 function startGame() {
     if (gameStarted) return;
     gameStarted = true;
+
+    // タイトルから（再）スタート時に状態をリセット
+    score = 0;
+    distance = 0;
+    gameActive = true;
+    frameCount = 0;
+    combo = 0;
+    forceHighJump = false;
+    lavaY = 750;
+    baseLavaSpeed = 0.8;
+    player = {
+        x: startX, y: 300, width: 35, height: 35,
+        speed: 7, velX: 0, velY: 0,
+        jumpCount: 0, maxJumps: 2,
+        canDash: true, isDashing: false, facing: "right",
+        flashFrame: 0,
+        onGround: false
+    };
+    cameraX = player.x - 450;
+    cameraY = player.y - 250;
+    platforms = [{ x: 0, y: 400, width: 800, height: 60, isMovingX: false, isMovingY: false }];
+    hazards = []; enemies = []; coins = []; springs = []; particles = []; popups = [];
+    vents = []; fireballs = [];
+    nextSpawnX = 800; lastY = 400;
+    keys = {};
+    scoreEl.innerText = 0;
+    distEl.innerText = 0;
+    dashBar.style.transition = "none";
+    dashBar.style.width = "100%";
+    dashBar.style.background = "#00ffcc";
+    dashBar.style.boxShadow = "0 0 10px #00ffcc";
+
     sounds.bgm.play();
+    sounds.start.play();
     titleScreen.style.display = "none";
     gameUI.style.display = "block";
     update(); // ここでループを開始
@@ -101,8 +274,11 @@ function startGame() {
 startBtn.addEventListener("click", startGame);
 
 window.addEventListener("keydown", (e) => {
+    if (e.code === "Escape") {
+        if (gameStarted) { goToTitle(); return; }
+    }
     if (e.code === "KeyR") {
-        resetGame(); // ページをリロードしてすべてをリセットする
+        if (gameStarted) { resetGame(); return; } // ゲーム中のみリスタート
         return;
     }
     if (!gameStarted && e.code === "Space") { startGame(); return; } // タイトルでスペース押しでも開始
@@ -177,6 +353,9 @@ function spawnChunk() {
     let isMovingX = randMove < 0.12;
     let isMovingY = randMove >= 0.12 && randMove < 0.24;
 
+    // 左右移動床はgapを広めに取って隣の床に潜り込まないようにする
+    if (isMovingX) gap = 300 + Math.random() * 150;
+
     let width = (isMovingX || isMovingY) ? (100 + Math.random() * 20) : (200 + Math.random() * 250);
 
     let rise;
@@ -198,8 +377,13 @@ function spawnChunk() {
         forceHighJump = true;
     }
 
+    // 左右移動床の可動範囲：gap の半分を超えないよう制限
+    const movingXRange = isMovingX ? Math.min(100 + Math.random() * 60, (gap - width) * 0.45) : 150 + Math.random() * 100;
+
+    const spawnOffsetX = isMovingX ? -100 : 0;
+
     let newPlatform = {
-        x: nextSpawnX + gap,
+        x: nextSpawnX + gap + spawnOffsetX,
         y: y,
         width: width,
         height: 30,
@@ -207,9 +391,9 @@ function spawnChunk() {
         isMovingY: isMovingY,
         velX: isMovingX ? (Math.random() < 0.5 ? 2.5 : -2.5) : 0,
         velY: isMovingY ? (Math.random() < 0.5 ? 2 : -2) : 0,
-        startX: nextSpawnX + gap,
+        startX: nextSpawnX + gap + spawnOffsetX,
         startY: y,
-        range: 150 + Math.random() * 100
+        range: movingXRange
     };
 
     platforms.push(newPlatform);
@@ -245,7 +429,7 @@ function spawnChunk() {
 
     if (Math.random() < 0.5) {
         let isRare = Math.random() < 0.2;
-        coins.push({ x: newPlatform.x + width / 2 - 12, y: y - (isRare ? 120 : 50), collected: false, isRare: isRare, angle: Math.random() * Math.PI * 2 });
+        coins.push({ x: newPlatform.x + width / 2 - 12, y: y - (isRare ? 120 : 120), collected: false, isRare: isRare, angle: Math.random() * Math.PI * 2 });
     }
     nextSpawnX += gap + width; lastY = y;
 }
@@ -282,7 +466,7 @@ function update() {
         // 距離が 500px 以内なら音を鳴らし、近いほど大きくする
         // 500px以上離れたら音量は 0
         let vol = Math.max(0, 1 - (distToLava / 500));
-        sounds.lavaLoop.volume = vol * mainVolume * 0.2 ; // 全体音量50%に合わせるなら * 0.5
+        sounds.lavaLoop.volume = vol * seVolume * 0.2; // 全体音量50%に合わせるなら * 0.5
 
         if (sounds.lavaLoop.paused) {
             sounds.lavaLoop.play();
@@ -291,7 +475,11 @@ function update() {
         sounds.lavaLoop.pause(); // ゲームオーバー時は止める
     }
 
-    if (!gameActive) { updateParticles(); updatePopups(); draw(); requestAnimationFrame(update); return; }
+    if (!gameActive) {
+        updateParticles(); updatePopups(); draw();
+        if (gameStarted) requestAnimationFrame(update); // タイトルに戻った場合はループ停止
+        return;
+    }
     if (player.flashFrame > 0) player.flashFrame--;
 
     let wasOnGround = player.onGround;
@@ -328,7 +516,7 @@ function update() {
         if (isCollide(player, v)) {
             player.velY -= 1.5; if (player.velY < -10) player.velY = -10;
             if (player.velY > 0) {
-                player.jumpCount = 0; // 落下中ならジャンプ回数をリセットして、気流から飛び出せるようにする
+                player.jumpCount = 1; // 落下中ならジャンプ回数をリセットして、気流から飛び出せるようにする
             }
             isInVent = true;
         }
@@ -389,7 +577,17 @@ function update() {
                 combo++; let comboScore = 500 * combo; score += comboScore;
                 addPopup(e.x, e.y, (combo > 1 ? combo + " COMBO! " : "") + "+" + comboScore, `hsl(${(combo * 40) % 360}, 100%, 70%)`, 24 + combo * 4);
                 createParticles(e.x + 15, e.y + 15, "#ffeb3b", 15, 8); enemies.splice(i, 1);
-            } else if (!player.isDashing) { gameOver(); }
+            } else if (player.isDashing) {
+                sounds.stomp.currentTime = 0;
+                sounds.stomp.play();
+                let comboScore = 500 * combo;
+                score += comboScore;
+                addPopup(e.x, e.y, (combo > 1 ? combo + " COMBO! " : "") + "+" + comboScore, `hsl(${(combo * 40) % 360}, 100%, 70%)`, 24 + combo * 4);
+                createParticles(e.x + 15, e.y + 15, "#ffeb3b", 15, 8);
+                enemies.splice(i, 1);
+            } else if (!player.isDashing) {
+                gameOver();
+            }
         }
     }
 
@@ -426,89 +624,379 @@ function update() {
 function updateParticles() { for (let i = particles.length - 1; i >= 0; i--) { let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life -= (p.isWind ? 0.03 : p.isHeat ? 0.01 : 0.025); if (p.life <= 0) particles.splice(i, 1); } }
 function updatePopups() { for (let i = popups.length - 1; i >= 0; i--) { popups[i].y -= 1.5; popups[i].life -= 0.02; if (popups[i].life <= 0) popups.splice(i, 1); } }
 
+// ドット風描画ヘルパー：8x8グリッドに沿って矩形を描く
+function pixelRect(x, y, w, h, color) {
+    const S = 4; // ドットサイズ
+    ctx.fillStyle = color;
+    const px = Math.floor(x / S) * S;
+    const py = Math.floor(y / S) * S;
+    const pw = Math.ceil(w / S) * S;
+    const ph = Math.ceil(h / S) * S;
+    ctx.fillRect(px, py, pw, ph);
+}
+
+// ドット風ピクセルフォント（ポップアップ用）
+function pixelText(text, x, y, color, size) {
+    ctx.fillStyle = color;
+    ctx.font = `bold ${size}px "Courier New", monospace`;
+    ctx.fillText(text, x, y);
+}
+
 function draw() {
+    ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = "#1a0a05";
+    // --- 背景：ドット山シルエット ---
+    ctx.globalAlpha = 0.55;
     mountains.forEach(m => {
         let mX = m.x - (cameraX * m.speedFactor);
         const loopW = mountainCount * mountainResetWidth;
         if (mX < -500) m.x += loopW;
-        ctx.beginPath();
-        ctx.moveTo(mX, m.y);
-        ctx.bezierCurveTo(mX + m.width * 0.2, m.y - m.height * 0.8, mX + m.width * 0.8, m.y - m.height * 0.8, mX + m.width, m.y);
-        ctx.fill();
+        const S = 8;
+        const steps = Math.ceil(m.width / S);
+        ctx.fillStyle = "#1a0a05";
+        for (let i = 0; i < steps; i++) {
+            // 三角形をブロック状にステップ近似
+            const t = i / steps;
+            const peakT = 0.5;
+            const normT = Math.abs(t - peakT) / peakT;
+            const colH = Math.floor((m.height * (1 - normT * normT)) / S) * S;
+            ctx.fillRect(Math.floor((mX + i * S) / S) * S, Math.floor(m.y / S) * S, S, colH);
+        }
     });
     ctx.globalAlpha = 1.0;
 
-    ctx.fillStyle = "rgba(255, 60, 0, 0.12)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.save(); ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
+    // --- 背景オーバーレイ ---
+    ctx.fillStyle = "rgba(255, 60, 0, 0.10)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    ctx.save();
+    ctx.translate(-Math.floor(cameraX), -Math.floor(cameraY));
+
+    // --- ベント（上昇気流）---
     vents.forEach(v => {
-        ctx.fillStyle = "#221100"; ctx.fillRect(v.x, v.y + v.height - 10, v.width, 10);
-        ctx.fillStyle = "#ff5722"; ctx.fillRect(v.x + 5, v.y + v.height - 15, v.width - 10, 5);
+        const S = 4;
+        // ベント本体（ダーク）
+        ctx.fillStyle = "#221100";
+        ctx.fillRect(Math.floor(v.x / S) * S, Math.floor((v.y + v.height - 10) / S) * S, Math.ceil(v.width / S) * S, S * 3);
+        // ベント口（オレンジ）
+        ctx.fillStyle = "#ff5722";
+        ctx.fillRect(Math.floor((v.x + 5) / S) * S, Math.floor((v.y + v.height - 15) / S) * S, Math.ceil((v.width - 10) / S) * S, S);
     });
 
+    // --- 足場（ドット風ブロック）---
     platforms.forEach(p => {
-        const px = Math.floor(p.x); const py = Math.floor(p.y);
-        ctx.lineWidth = 2;
+        const S = 4;
+        const px = Math.floor(p.x / S) * S;
+        const py = Math.floor(p.y / S) * S;
+        const pw = Math.ceil(p.width / S) * S;
+        const ph = Math.ceil(p.height / S) * S;
+
+        // --- 動く床の可動範囲を表示 ---
+        if (p.isMovingX) {
+            const railY = py + ph / 2;
+            const rangeLeft = Math.floor((p.startX - p.range) / S) * S;
+            const rangeRight = Math.floor((p.startX + p.range + pw) / S) * S;
+            const rangeW = rangeRight - rangeLeft;
+
+            // レール本体（半透明ライン）
+            ctx.globalAlpha = 0.22;
+            ctx.fillStyle = "#ff5722";
+            ctx.fillRect(rangeLeft, railY - S, rangeW, S * 2);
+
+            // ドット点線（レール上）
+            ctx.fillStyle = "#ffaa44";
+            for (let dx = rangeLeft + S * 4; dx < rangeRight - S * 4; dx += S * 6) {
+                ctx.fillRect(dx, railY - S / 2, S * 3, S);
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        if (p.isMovingY) {
+            const railX = px + pw / 2;
+            const rangeTop = Math.floor((p.startY - p.range) / S) * S;
+            const rangeBottom = Math.floor((p.startY + p.range + ph) / S) * S;
+            const rangeH = rangeBottom - rangeTop;
+
+            // レール本体（半透明ライン）
+            ctx.globalAlpha = 0.22;
+            ctx.fillStyle = "#ff9800";
+            ctx.fillRect(railX - S, rangeTop, S * 2, rangeH);
+
+            // ドット点線（レール上）
+            ctx.fillStyle = "#ffdd88";
+            for (let dy = rangeTop + S * 4; dy < rangeBottom - S * 4; dy += S * 6) {
+                ctx.fillRect(railX - S / 2, dy, S, S * 3);
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
         if (p.isMovingX || p.isMovingY) {
-            let grad = ctx.createLinearGradient(px, py, px, py + p.height);
-            if (p.isMovingY) { grad.addColorStop(0, "#ff9800"); grad.addColorStop(1, "#f44336"); }
-            else { grad.addColorStop(0, "#ff5722"); grad.addColorStop(1, "#795548"); }
-            ctx.fillStyle = grad;
-            ctx.strokeStyle = "#ff9800";
-            drawRoundRect(px, py, p.width, p.height, 5, true, true);
+            ctx.fillStyle = p.isMovingY ? "#ff9800" : "#ff5722";
+            ctx.fillRect(px, py, pw, ph);
+            // ハイライト上辺
+            ctx.fillStyle = "#ffcc80";
+            ctx.fillRect(px, py, pw, S);
+            // ドット模様（クリッピングして溢れ防止）
+            ctx.fillStyle = "rgba(255,255,255,0.25)";
+            const dotCount = Math.floor((pw - S * 4) / (S * 8));
+            for (let i = 0; i < dotCount; i++) {
+                const dotX = px + S * 2 + i * S * 8;
+                if (dotX + S * 2 <= px + pw) {
+                    ctx.fillRect(dotX, py + S * 2, S * 2, S * 2);
+                }
+            }
+            // 枠線（ドット）
+            ctx.fillStyle = "#ff9800";
+            ctx.fillRect(px, py, pw, S);
+            ctx.fillRect(px, py + ph - S, pw, S);
+            ctx.fillRect(px, py, S, ph);
+            ctx.fillRect(px + pw - S, py, S, ph);
+            // 下辺オレンジライン
+            ctx.fillStyle = "#ffcc00";
+            ctx.fillRect(px, py + ph, pw, S);
         } else {
+            // 通常足場：石ブロック風
             ctx.fillStyle = "#3d2a2a";
-            ctx.strokeStyle = "#ff8c00";
-            drawRoundRect(px, py, p.width, p.height, 5, true, true);
-        }
-
-        ctx.fillStyle = (p.isMovingX || p.isMovingY) ? "rgba(255, 255, 255, 0.2)" : "#4a3535";
-        for (let i = 0; i < (p.width - 20) / 30; i++) {
-            let relX = 15 + i * 30;
-            ctx.beginPath();
-            ctx.arc(px + relX + Math.sin(i) * 5, py + 15 + Math.cos(i) * 5, 8, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillRect(px, py, pw, ph);
+            // 上面ハイライト
+            ctx.fillStyle = "#5a3d3d";
+            ctx.fillRect(px, py, pw, S);
+            // ブロック目地
+            ctx.fillStyle = "#2a1a1a";
+            const blockW = S * 8;
+            for (let bx = px; bx < px + pw; bx += blockW) {
+                ctx.fillRect(bx, py, S, ph);
+            }
+            for (let by = py; by < py + ph; by += S * 4) {
+                ctx.fillRect(px, by, pw, S);
+            }
+            // ドット飾り
+            ctx.fillStyle = "#4a3535";
+            for (let i = 0; i < (pw - S * 4) / (S * 8); i++) {
+                ctx.fillRect(px + S * 4 + i * S * 8, py + S * 2, S * 2, S * 2);
+            }
+            // 枠
+            ctx.fillStyle = "#ff8c00";
+            ctx.fillRect(px, py, pw, S);
+            ctx.fillRect(px, py, S, ph);
+            ctx.fillRect(px + pw - S, py, S, ph);
+            // 下辺オレンジライン
+            ctx.fillStyle = "#ff8c00";
+            ctx.fillRect(px, py + ph, pw, S);
         }
     });
 
+    // --- ファイアボール（ドット風）---
     fireballs.forEach(f => {
-        let grad = ctx.createRadialGradient(f.x + 12, f.y + 12, 2, f.x + 12, f.y + 12, 18);
-        grad.addColorStop(0, "#fff"); grad.addColorStop(0.3, "#ffeb3b"); grad.addColorStop(1, "#ff5722");
-        ctx.fillStyle = grad;
-        ctx.beginPath(); ctx.arc(f.x + 12, f.y + 12, 15, 0, Math.PI * 2); ctx.fill();
-        if (frameCount % 3 === 0) particles.push({ x: f.x + 12, y: f.y + 12, vx: (Math.random() - 0.5) * 1.5, vy: 1, life: 0.6, color: "#ff9100", size: 5 });
+        const S = 4;
+        const cx = Math.floor((f.x + 12) / S) * S;
+        const cy = Math.floor((f.y + 12) / S) * S;
+        // 外炎
+        ctx.fillStyle = "#ff5722";
+        ctx.fillRect(cx - S * 3, cy - S * 3, S * 6, S * 6);
+        // 中炎
+        ctx.fillStyle = "#ffeb3b";
+        ctx.fillRect(cx - S * 2, cy - S * 2, S * 4, S * 4);
+        // 芯
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(cx - S, cy - S, S * 2, S * 2);
+        if (frameCount % 3 === 0) particles.push({ x: f.x + 12, y: f.y + 12, vx: (Math.random() - 0.5) * 1.5, vy: 1, life: 0.6, color: "#ff9100", size: 6 });
     });
 
-    hazards.forEach(h => { const spikeCount = h.width / 10; for (let i = 0; i < spikeCount; i++) { let sx = h.x + i * 10, sy = h.y + 10; let grad = ctx.createLinearGradient(sx, sy, sx, sy - 15); grad.addColorStop(0, "#b71c1c"); grad.addColorStop(1, "#ff5252"); ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 5, sy - 15); ctx.lineTo(sx + 10, sy); ctx.fill(); ctx.fillStyle = "#fff"; ctx.fillRect(sx + 4, sy - 15, 2, 2); } });
-    enemies.forEach(e => { if (e.type === "patrol") { ctx.fillStyle = "#9c27b0"; drawRoundRect(e.x, e.y, e.width, e.height, 15); ctx.fillStyle = "#ffeb3b"; ctx.beginPath(); let eyeX = e.x + (e.speed > 0 ? 20 : 5); ctx.arc(eyeX, e.y + 10, 4, 0, Math.PI * 2); ctx.fill(); } else { ctx.fillStyle = "#ff5252"; ctx.beginPath(); ctx.arc(e.x + 15, e.y + 15, 10 + Math.sin(frameCount * 0.1) * 3, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "rgba(255, 255, 255, 0.5)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(e.x + 15, e.y + 15, 20, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 15; ctx.shadowColor = "#ff5252"; ctx.beginPath(); ctx.arc(e.x + 15, e.y + 15, 20, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; } });
-
-    springs.forEach(s => {
-        ctx.fillStyle = "#444";
-        drawRoundRect(s.x, s.y + s.height - 6, s.width, 6, 3);
-        ctx.fillStyle = "#bbb";
-        for (let i = 0; i < 5; i++) {
-            drawRoundRect(s.x + 4, s.y + (i * 3.5) + 2, s.width - 8, 3, 1.5);
+    // --- ハザード（トゲ：ドット風ピクセル三角）---
+    hazards.forEach(h => {
+        const S = 4;
+        const spikeCount = Math.floor(h.width / (S * 3));
+        for (let i = 0; i < spikeCount; i++) {
+            const sx = h.x + i * S * 3;
+            // ピクセル三角（ステップ状）
+            for (let row = 0; row < 3; row++) {
+                const rowW = (3 - row) * S;
+                const rowX = sx + (i % 2 === 0 ? row : 0) * S / 2;
+                ctx.fillStyle = row === 0 ? "#b71c1c" : row === 1 ? "#e53935" : "#ff5252";
+                ctx.fillRect(Math.floor(sx / S) * S + row * S, h.y + (2 - row) * S, S * (3 - row * 0.5 | 0), S);
+            }
+            // 先端光
+            ctx.fillStyle = "#ffcdd2";
+            ctx.fillRect(Math.floor(sx / S) * S + S * 2, h.y, S, S);
         }
     });
 
-    coins.forEach(c => { if (!c.collected) { let scaleX = Math.cos(c.angle); let coinW = 20 * Math.abs(scaleX); let coinX = c.x + 12 - coinW / 2; ctx.save(); if (c.isRare) { let hue = (Date.now() / 8) % 360; ctx.fillStyle = `hsl(${hue}, 100%, 65%)`; ctx.shadowBlur = 15; ctx.shadowColor = `hsl(${hue}, 100%, 65%)`; } else { ctx.fillStyle = "#FFD700"; } ctx.beginPath(); ctx.ellipse(coinX + coinW / 2, c.y + 12, coinW / 2, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } });
-    particles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2); ctx.fill(); });
+    // --- 敵（ドット風スプライト）---
+    enemies.forEach(e => {
+        const S = 4;
+        const ex = Math.floor(e.x / S) * S;
+        const ey = Math.floor(e.y / S) * S;
+        if (e.type === "patrol") {
+            // ボディ
+            ctx.fillStyle = "#7b1fa2";
+            ctx.fillRect(ex, ey + S, S * 7, S * 5);
+            // 頭
+            ctx.fillStyle = "#9c27b0";
+            ctx.fillRect(ex + S, ey, S * 5, S * 3);
+            // 目
+            ctx.fillStyle = "#ffeb3b";
+            const eyeOffX = e.speed > 0 ? S * 4 : S;
+            ctx.fillRect(ex + eyeOffX, ey + S, S * 2, S * 2);
+            // 足
+            ctx.fillStyle = "#6a1b9a";
+            ctx.fillRect(ex + S, ey + S * 6, S * 2, S);
+            ctx.fillRect(ex + S * 4, ey + S * 6, S * 2, S);
+        } else {
+            // ドローン：点滅するドット円形
+            const pulse = Math.floor(Math.sin(frameCount * 0.1) * 2);
+            ctx.fillStyle = "#c62828";
+            ctx.fillRect(ex + S, ey, S * 5, S * 7);
+            ctx.fillRect(ex, ey + S, S * 7, S * 5);
+            ctx.fillStyle = "#ff5252";
+            ctx.fillRect(ex + S * 2, ey + S, S * 3, S * 5);
+            ctx.fillRect(ex + S, ey + S * 2, S * 5, S * 3);
+            // 目（中央）
+            ctx.fillStyle = "#ffcdd2";
+            ctx.fillRect(ex + S * 3, ey + S * 3, S, S);
+            // 外リング（ドット）
+            ctx.fillStyle = "rgba(255,82,82,0.5)";
+            ctx.fillRect(ex - S + pulse, ey + S * 3, S * 2, S);
+            ctx.fillRect(ex + S * 6 - pulse, ey + S * 3, S * 2, S);
+            ctx.fillRect(ex + S * 3, ey - S + pulse, S, S * 2);
+            ctx.fillRect(ex + S * 3, ey + S * 6 - pulse, S, S * 2);
+        }
+    });
 
-    ctx.globalAlpha = 1.0; popups.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.font = `bold ${p.size}px Arial`; ctx.fillText(p.text, p.x, p.y); });
+    // --- バネ（ドット風）---
+    springs.forEach(s => {
+        const S = 4;
+        const sx = Math.floor(s.x / S) * S;
+        const sy = Math.floor(s.y / S) * S;
+        // ベース
+        ctx.fillStyle = "#555";
+        ctx.fillRect(sx, sy + s.height - S * 2, Math.ceil(s.width / S) * S, S * 2);
+        // コイル（交互パターン）
+        for (let i = 0; i < 4; i++) {
+            ctx.fillStyle = i % 2 === 0 ? "#cccccc" : "#888888";
+            const offset = i % 2 === 0 ? 0 : S;
+            ctx.fillRect(sx + offset, sy + i * S * 2, Math.ceil(s.width / S) * S - offset, S);
+        }
+        // 先端
+        ctx.fillStyle = "#00e5cc";
+        ctx.fillRect(sx + S, sy, Math.ceil(s.width / S) * S - S * 2, S * 2);
+    });
+
+    // --- コイン（ドット風）---
+    coins.forEach(c => {
+        if (!c.collected) {
+            const S = 4;
+            const cx = Math.floor(c.x / S) * S;
+            const cy = Math.floor(c.y / S) * S;
+            const flicker = Math.floor(Math.abs(Math.cos(c.angle)) * 3);
+            if (c.isRare) {
+                const hue = (Date.now() / 8) % 360;
+                ctx.fillStyle = `hsl(${hue}, 100%, 65%)`;
+                ctx.fillRect(cx + S * flicker, cy, S * (4 - flicker * 2), S * 6);
+                ctx.fillRect(cx + S * (flicker - 1 < 0 ? 0 : flicker - 1), cy + S, S * (4 - (flicker - 1) * 2 < 0 ? 2 : 4 - (flicker - 1) * 2), S * 4);
+                // 光沢
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(cx + S * flicker, cy + S, S, S);
+            } else {
+                ctx.fillStyle = "#FFD700";
+                ctx.fillRect(cx + S * flicker, cy, S * (4 - flicker * 2), S * 6);
+                ctx.fillStyle = "#FFA000";
+                ctx.fillRect(cx + S * flicker, cy + S * 3, S * (4 - flicker * 2), S * 2);
+                // 光沢
+                ctx.fillStyle = "#FFFF88";
+                ctx.fillRect(cx + S * flicker, cy + S, S, S);
+            }
+        }
+    });
+
+    // --- パーティクル（ドット風：丸→四角）---
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        const S = 4;
+        const ps = Math.max(S, Math.ceil(p.size / S) * S);
+        ctx.fillRect(Math.floor(p.x / S) * S, Math.floor(p.y / S) * S, ps, ps);
+    });
+
     ctx.globalAlpha = 1.0;
 
-    ctx.fillStyle = "#FF5722"; drawRoundRect(player.x, player.y, player.width, player.height, 10);
-    ctx.fillStyle = (player.flashFrame > 0) ? "#00ffff" : "white";
-    let eyeX = player.facing === "right" ? player.x + 20 : player.x + 5; ctx.beginPath(); ctx.arc(eyeX + 5, player.y + 12, 5, 0, Math.PI * 2); ctx.fill();
+    // --- ポップアップテキスト（ドットフォント風）---
+    popups.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.font = `bold ${p.size}px "DotGothic16", monospace`;
+        ctx.fillText(p.text, p.x, p.y);
+    });
+    ctx.globalAlpha = 1.0;
 
-    ctx.fillStyle = "rgba(255, 61, 0, 0.85)"; ctx.beginPath(); ctx.moveTo(cameraX, lavaY); for (let x = cameraX; x <= cameraX + canvas.width; x += 40) { let waveY = Math.sin((x + frameCount * 5) * 0.02) * 8; ctx.lineTo(x, lavaY + waveY); } ctx.lineTo(cameraX + canvas.width, 2500); ctx.lineTo(cameraX, 2500); ctx.fill();
-    ctx.fillStyle = "#ff9100"; for (let x = cameraX; x <= cameraX + canvas.width; x += 80) { let waveY = Math.sin((x + frameCount * 5) * 0.02) * 8; ctx.fillRect(x, lavaY + waveY - 2, 40, 4); }
+    // --- プレイヤー（ドット風スプライト）---
+    {
+        const S = 4;
+        const px = Math.floor(player.x / S) * S;
+        const py = Math.floor(player.y / S) * S;
+        const isFlash = player.flashFrame > 0;
+        // ボディ
+        ctx.fillStyle = isFlash ? "#00e5ff" : "#FF5722";
+        ctx.fillRect(px + S, py + S * 2, S * 6, S * 5);
+        // 頭
+        ctx.fillStyle = isFlash ? "#00e5ff" : "#FF7043";
+        ctx.fillRect(px + S, py, S * 6, S * 3);
+        // 目
+        ctx.fillStyle = isFlash ? "#ffffff" : "white";
+        const eyeOffX = player.facing === "right" ? S * 4 : S;
+        ctx.fillRect(px + eyeOffX, py + S, S * 2, S * 2);
+        // 瞳
+        ctx.fillStyle = isFlash ? "#ff0" : "#222";
+        ctx.fillRect(px + eyeOffX + (player.facing === "right" ? S : 0), py + S, S, S);
+        // 足
+        ctx.fillStyle = isFlash ? "#00b0ff" : "#BF360C";
+        ctx.fillRect(px + S, py + S * 7, S * 2, S * 2);
+        ctx.fillRect(px + S * 5, py + S * 7, S * 2, S * 2);
+        // ダッシュエフェクト
+        if (player.isDashing) {
+            ctx.fillStyle = "rgba(0,229,204,0.5)";
+            const trailDir = player.facing === "right" ? -1 : 1;
+            ctx.fillRect(px + trailDir * S * 4, py + S * 2, S * 4, S * 4);
+        }
+    }
+
+    // --- 溶岩（ドット風・波なし）---
+    {
+        const S = 4;
+        const lavaTop = Math.floor(lavaY / S) * S;
+        // 溶岩本体（フラットに）
+        ctx.fillStyle = "rgba(255, 61, 0, 0.88)";
+        ctx.fillRect(Math.floor(cameraX / S) * S, lavaTop, canvas.width + S, 2500);
+        // 表面ハイライト（明るい行）
+        ctx.fillStyle = "rgba(255,160,0,0.6)";
+        ctx.fillRect(Math.floor(cameraX / S) * S, lavaTop, canvas.width + S, S * 2);
+        // ドット泡
+        for (let i = 0; i < 8; i++) {
+            const bx = Math.floor((cameraX + (i * 90 + (frameCount * 1.5) % 80)) / S) * S;
+            const by = lavaTop + S * 4 + (i % 3) * S * 2;
+            ctx.fillStyle = "#ffcc00";
+            ctx.fillRect(bx, by, S * 2, S * 2);
+        }
+    }
+
     ctx.restore();
 }
 
 // 初期化：背景だけ描画しておく
+// ダッシュバーをドット風スタイルに初期化
+(function initDashBarStyle() {
+    const dotPattern = "repeating-linear-gradient(90deg, transparent 0px, transparent 6px, rgba(0,0,0,0.35) 6px, rgba(0,0,0,0.35) 8px)";
+    const origTransition = dashBar.style.transition;
+
+    // dashBarの色変更をすべてdotパターン付きに上書きするMutationObserver
+    const observer = new MutationObserver(() => {
+        if (!dashBar.style.backgroundImage || !dashBar.style.backgroundImage.includes("repeating-linear-gradient")) {
+            dashBar.style.backgroundImage = dotPattern;
+        }
+    });
+    observer.observe(dashBar, { attributes: true, attributeFilter: ["style"] });
+
+    dashBar.style.backgroundImage = dotPattern;
+})();
 draw();
