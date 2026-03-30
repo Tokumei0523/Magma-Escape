@@ -1,20 +1,26 @@
+/* 特定のクラス名やIDを指定 */
+.search-bar {
+    display: none;
+}
+
+
 /* --- ベーススタイル --- */
 body {
     margin: 0;
     background: #0a0a0a;
     color: white;
-    /* 全体にドットフォントを適用 */
     font-family: 'DotGothic16', sans-serif;
     overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    height: 100dvh; /* ビューポート高さを動的に調整（モバイル対応） */
+    height: 100dvh;
     width: 100vw;
     -webkit-user-select: none;
     user-select: none;
-    position: fixed; /* モバイルで画面スクロール防止 */
+    position: fixed;
+    touch-action: none;
 }
 
 #game-container {
@@ -24,6 +30,7 @@ body {
     box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
     width: 1200px;
     height: 600px;
+    touch-action: none;
 }
 
 canvas {
@@ -31,6 +38,7 @@ canvas {
     display: block;
     width: 100%;
     height: 100%;
+    touch-action: none;
 }
 
 /* --- モバイル対応 --- */
@@ -40,11 +48,13 @@ canvas {
         height: 100vh;
         border-radius: 0;
         border: none;
+        touch-action: none;
     }
-    
+
     canvas {
         width: 100%;
         height: 100%;
+        touch-action: none;
     }
 }
 
@@ -57,11 +67,13 @@ canvas {
     height: auto;
     display: none;
     justify-content: space-between;
-    padding: 20px 25px 25px;
-    gap: 20px;
+    align-items: center;
+    padding: 15px 20px 20px;
+    gap: 10px;
     z-index: 50;
     background: rgba(0, 0, 0, 0.6);
     pointer-events: auto;
+    box-sizing: border-box;
 }
 
 .touch-controls.active {
@@ -70,33 +82,35 @@ canvas {
 
 .touch-button-group {
     display: flex;
-    gap: 15px;
+    gap: 10px;
+    align-items: center;
 }
 
 .touch-button-group.left {
-    flex: 1;
+    flex: 0;
 }
 
 .touch-button-group.right {
-    flex: 1;
-    justify-content: flex-end;
+    flex: 0;
+    margin-left: auto;
 }
 
 .touch-btn {
-    width: 80px;
-    height: 80px;
-    border-radius: 12px;
+    width: 70px;
+    height: 70px;
+    border-radius: 10px;
     border: 2px solid #ff9100;
     background: rgba(255, 145, 0, 0.2);
     color: #ff9100;
     font-weight: bold;
     font-size: 16px;
     cursor: pointer;
-    touch-action: manipulation;
+    touch-action: none;
     -webkit-user-select: none;
     user-select: none;
     font-family: 'DotGothic16', sans-serif;
     transition: all 0.1s;
+    padding: 0;
 }
 
 .touch-btn:active {
@@ -105,27 +119,25 @@ canvas {
 }
 
 .touch-left {
-    width: 70px;
-    height: 70px;
+    width: 60px;
+    height: 60px;
     font-size: 24px;
     padding: 0;
 }
 
 .touch-right {
-    width: 70px;
-    height: 70px;
+    width: 60px;
+    height: 60px;
     font-size: 14px;
     padding: 0;
 }
 
 .touch-jump {
-    flex: 1;
-    max-width: 150px;
+    max-width: 120px;
 }
 
 .touch-dash {
-    flex: 1;
-    max-width: 150px;
+    max-width: 120px;
 }
 
 /* 横向き警告 */
@@ -187,7 +199,8 @@ canvas {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.9);
-    display: none; /* JSで flex に切り替えて表示 */
+    display: none;
+    /* JSで flex に切り替えて表示 */
     justify-content: center;
     align-items: center;
     z-index: 300;
@@ -259,8 +272,8 @@ button {
     cursor: pointer;
     background: #ff1744;
     color: white;
-    border: none;
-    border-radius: 50px;
+    border: 4px solid #8e0e28;
+    border-radius: 10px;
     transition: all 0.2s;
     box-shadow: 0 4px 15px rgba(255, 23, 68, 0.4);
     text-transform: uppercase;
@@ -277,6 +290,7 @@ button:hover {
     font-size: 18px;
     padding: 12px 30px;
     box-shadow: none;
+    border: 4px solid #343434;
 }
 
 .sub-btn:hover {
@@ -332,4 +346,27 @@ button:hover {
     border-radius: 20px;
     border: 3px solid #ff1744;
     z-index: 100;
+}
+
+/* Chromium系ブラウザの遅延排除：touch-action を適切に設定 */
+body {
+    touch-action: none;
+    /* すべてのタッチ操作をJSで管理（スクロール禁止） */
+}
+
+canvas,
+#touchControls,
+.touch-btn {
+    touch-action: none;
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+}
+
+/* モーダル内のスクロール許可 */
+.modal-content {
+    touch-action: auto;
 }
