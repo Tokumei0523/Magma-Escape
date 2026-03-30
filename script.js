@@ -16,6 +16,18 @@ window.addEventListener("DOMContentLoaded", () => {
     updateSeVolume(seVolume);
 });
 
+//コンテキストメニューの禁止
+window.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+}, false);
+
+
+// タッチスクロール防止はCSSの touch-action で処理
+// JavaScriptのpreventDefault()は使用しない（Chromiumで遅延が生じるため）
+
+
+
+
 const sounds = {
     bgm: new Audio("sounds/bgm.mp3"),
     lavaLoop: new Audio("sounds/lava_loop.mp3"), // 迫ってくる音
@@ -79,8 +91,8 @@ let combo = 0;
 let forceHighJump = false; // 次の足場を高くするためのフラグ
 
 let lavaY = 750;
-let baseLavaSpeed = 0.8;
-const lavaAccel = 0.00012;
+let baseLavaSpeed = 1.4;
+const lavaAccel = 0.0001;
 
 const startX = 100;
 const gravity = 0.55;
@@ -311,11 +323,7 @@ if (touchBtns.jump) {
         }
     };
 
-    touchBtns.jump.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        jumpAction();
-    });
-    touchBtns.jump.addEventListener("mousedown", jumpAction);
+    touchBtns.jump.addEventListener("pointerdown", jumpAction);
 }
 
 // ダッシュボタン
@@ -366,26 +374,19 @@ if (touchBtns.dash) {
         }
     };
 
-    touchBtns.dash.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        dashAction();
-    });
-    touchBtns.dash.addEventListener("mousedown", dashAction);
+    touchBtns.dash.addEventListener("pointerdown", dashAction);
+    touchBtns.dash.addEventListener("pointerup", () => {});
 }
 
 // 移動ボタン（キーボードと同じ方式）
 if (touchBtns.left) {
-    touchBtns.left.addEventListener("touchstart", (e) => { e.preventDefault(); keys["ArrowLeft"] = true; keys["A"] = true; });
-    touchBtns.left.addEventListener("touchend", (e) => { e.preventDefault(); keys["ArrowLeft"] = false; keys["A"] = false; });
-    touchBtns.left.addEventListener("mousedown", () => { keys["ArrowLeft"] = true; keys["A"] = true; });
-    touchBtns.left.addEventListener("mouseup", () => { keys["ArrowLeft"] = false; keys["A"] = false; });
+    touchBtns.left.addEventListener("pointerdown", () => { keys["ArrowLeft"] = true; keys["A"] = true; });
+    touchBtns.left.addEventListener("pointerup", () => { keys["ArrowLeft"] = false; keys["A"] = false; });
 }
 
 if (touchBtns.right) {
-    touchBtns.right.addEventListener("touchstart", (e) => { e.preventDefault(); keys["ArrowRight"] = true; keys["D"] = true; });
-    touchBtns.right.addEventListener("touchend", (e) => { e.preventDefault(); keys["ArrowRight"] = false; keys["D"] = false; });
-    touchBtns.right.addEventListener("mousedown", () => { keys["ArrowRight"] = true; keys["D"] = true; });
-    touchBtns.right.addEventListener("mouseup", () => { keys["ArrowRight"] = false; keys["D"] = false; });
+    touchBtns.right.addEventListener("pointerdown", () => { keys["ArrowRight"] = true; keys["D"] = true; });
+    touchBtns.right.addEventListener("pointerup", () => { keys["ArrowRight"] = false; keys["D"] = false; });
 }
 
 function resetGame() {
@@ -398,7 +399,7 @@ function resetGame() {
     forceHighJump = false;
 
     lavaY = 750;
-    baseLavaSpeed = 0.8;
+    baseLavaSpeed = 1.4;
 
     player = {
         x: startX, y: 300, width: 35, height: 35,
@@ -468,7 +469,7 @@ function startGame() {
     combo = 0;
     forceHighJump = false;
     lavaY = 750;
-    baseLavaSpeed = 0.8;
+    baseLavaSpeed = 1.4;
     player = {
         x: startX, y: 300, width: 35, height: 35,
         speed: 7, velX: 0, velY: 0,
@@ -600,11 +601,12 @@ function spawnChunk() {
     let y = lastY - rise;
 
     if (isMovingY) {
-        y -= 50;
+        y -= 100;
         forceHighJump = true;
     }
 
     // 左右移動床の可動範囲：gap の半分を超えないよう制限
+    const movingYRange = 30 + Math.random() * 20;
     const movingXRange = isMovingX ? Math.min(100 + Math.random() * 60, (gap - width) * 0.45) : 150 + Math.random() * 100;
 
     const spawnOffsetX = isMovingX ? -100 : 0;
@@ -617,7 +619,7 @@ function spawnChunk() {
         isMovingX: isMovingX,
         isMovingY: isMovingY,
         velX: isMovingX ? (Math.random() < 0.5 ? 2.5 : -2.5) : 0,
-        velY: isMovingY ? (Math.random() < 0.5 ? 2 : -2) : 0,
+        velY: isMovingY ? (Math.random() < 0.5 ? 3 : -3) : 0,
         startX: nextSpawnX + gap + spawnOffsetX,
         startY: y,
         range: movingXRange
@@ -699,19 +701,18 @@ function update(currentTime) {
     // フレームレート制御（60FPSに統一）
     if (lastFrameTime === 0) lastFrameTime = currentTime;
     const deltaTime = currentTime - lastFrameTime;
-    lastFrameTime = currentTime;
-
-    // フレームをスキップするか、複数フレーム分の更新が必要か判定
-    if (deltaTime < FRAME_TIME * 0.8) {
-        // フレームレートが高い場合はスキップ
+    
+    // 遅延の少ない単純なフレーム判定：15ms以上経過なら処理
+    if (deltaTime < 15) {
         requestAnimationFrame(update);
         return;
     }
-
+    
+    lastFrameTime = currentTime;
     frameCount++;
 
 
-    if (gameActive) {
+    if (frameCount % 10 === 0 && gameActive) {
         // プレイヤーとマグマの距離を計算
         let distToLava = lavaY - (player.y + player.height);
 
@@ -723,7 +724,7 @@ function update(currentTime) {
         if (sounds.lavaLoop.paused) {
             sounds.lavaLoop.play();
         }
-    } else {
+    } else if(!gameActive){
         sounds.lavaLoop.pause(); // ゲームオーバー時は止める
     }
 
@@ -834,14 +835,14 @@ function update(currentTime) {
                 sounds.stomp.currentTime = 0;
                 sounds.stomp.play();
                 player.velY = -10; player.jumpCount = 1; player.flashFrame = 8;
-                combo++; let comboScore = 500 * combo; score += comboScore;
+                combo++; let comboScore = 200 * combo; score += comboScore;
                 addPopup(e.x, e.y, (combo > 1 ? combo + " COMBO! " : "") + "+" + comboScore, `hsl(${(combo * 40) % 360}, 100%, 70%)`, 24 + combo * 4);
                 createParticles(e.x + 15, e.y + 15, "#ffeb3b", 15, 8); enemies.splice(i, 1);
             } else if (player.isDashing) {
                 sounds.stomp.currentTime = 0;
                 sounds.stomp.play();
                 combo++;
-                let comboScore = 500 * combo;
+                let comboScore = 200 * combo;
                 score += comboScore;
                 addPopup(e.x, e.y, (combo > 1 ? combo + " COMBO! " : "") + "+" + comboScore, `hsl(${(combo * 40) % 360}, 100%, 70%)`, 24 + combo * 4);
                 createParticles(e.x + 15, e.y + 15, "#ffeb3b", 15, 8);
@@ -885,7 +886,7 @@ function update(currentTime) {
     cameraX += (player.x - 450 - cameraX) * scrollSpeed; cameraY += (player.y - 250 - cameraY) * scrollSpeed;
     if (player.x + 1200 > nextSpawnX) spawnChunk();
 
-    lavaY -= (lavaY - (player.y + player.height) < 180) ? baseLavaSpeed * 0.35 : (lavaY - (player.y + player.height) > 600 ? baseLavaSpeed * 10 : baseLavaSpeed);
+    lavaY -= (lavaY - (player.y + player.height) < 200) ? baseLavaSpeed * 0.4 : (lavaY - (player.y + player.height) > 600 ? baseLavaSpeed * 12 : baseLavaSpeed);
     baseLavaSpeed += lavaAccel; if (player.y + player.height > lavaY) gameOver();
     draw(); requestAnimationFrame(update);
 }
@@ -1239,7 +1240,7 @@ function draw() {
         const S = 4;
         const px = Math.floor(player.x / S) * S;
         const py = Math.floor(player.y / S) * S;
-        const isFlash = player.flashFrame > 0;
+        const isFlash = player.flashFrame > 0 || player.isDashing;
         // ボディ
         ctx.fillStyle = isFlash ? "#00e5ff" : "#FF5722";
         ctx.fillRect(px + S, py + S * 2, S * 6, S * 5);
