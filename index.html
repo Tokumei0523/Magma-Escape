@@ -4,9 +4,10 @@
 <head>
     <link rel="icon" href="images/favicon.png" type="image/png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, minimal-ui">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Magma Escape">
     <meta name="apple-mobile-web-app-title" content="Magma Escape">
     <meta name="theme-color" content="#0a0a0a">
     <meta name="mobile-web-app-capable" content="yes">
@@ -54,9 +55,10 @@
                 <h2>How to Play</h2>
                 <div class="controls-guide">
                     <p><b>MOVE:</b> [A / D] or [← / →]</p>
-                    <p><b>JUMP:</b> [Space / W / ↑]</p>
+                    <p><b>JUMP / DOUBLE JUMP:</b> [Space / W / ↑]</p>
                     <p><b>DASH:</b> [Shift]</p>
                     <p><b>RESET:</b> [R]</p>
+                    <p><b>TITLE:</b> [ESC]</p>
                 </div>
                 <button id="closeHowTo" class="sub-btn">CLOSE</button>
             </div>
@@ -75,12 +77,12 @@
         <!-- モバイルタッチコントロール -->
         <div id="touchControls" class="touch-controls">
             <div class="touch-button-group left">
-                <button id="leftBtn" class="touch-btn touch-left" data-action="left">←</button>
-                <button id="rightBtn" class="touch-btn touch-right" data-action="right">→</button>
+                <button id="leftBtn" class="touch-btn touch-left" data-action="left" draggable="false">←</button>
+                <button id="rightBtn" class="touch-btn touch-right" data-action="right" draggable="false">→</button>
             </div>
             <div class="touch-button-group right">
-                <button id="jumpBtn" class="touch-btn touch-jump" data-action="jump">JUMP</button>
-                <button id="dashBtn" class="touch-btn touch-dash" data-action="dash">DASH</button>
+                <button id="jumpBtn" class="touch-btn touch-jump" data-action="jump" draggable="false">JUMP</button>
+                <button id="dashBtn" class="touch-btn touch-dash" data-action="dash" draggable="false">DASH</button>
             </div>
         </div>
 
